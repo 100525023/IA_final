@@ -1,0 +1,12 @@
+{
+    "model": "RBMK", 
+    "effective_section": 17.6, 
+    "neutron_flux": 5e13, 
+    "core_volume": 9.42e6, 
+    "fision_energy": 3.2e-11, 
+    "probabilities": { 
+        "decrease": [0.55, 0.20, 0.25], 
+        "maintain": [0.95, 0.025, 0.025], 
+        "increase": [0.65, 0.25, 0.1]
+    } 
+}
