@@ -1,0 +1,12 @@
+{
+    "model": "CHAOTIC",
+    "effective_section": 17.6,
+    "neutron_flux": 5e13,
+    "core_volume": 9.42e6,
+    "fision_energy": 3.2e-11,
+    "probabilities": {
+        "decrease": [0.33, 0.34, 0.33],
+        "maintain": [0.33, 0.34, 0.33],
+        "increase": [0.33, 0.34, 0.33]
+    }
+}

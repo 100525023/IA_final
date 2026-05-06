@@ -1,7 +1,25 @@
 # Import required dependencies
+import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')          # Backend sin pantalla: guarda en fichero, no abre ventana
 import matplotlib.pyplot as plt
 from Reactor import Reactor
+
+# Carpeta donde se guardarán todas las gráficas
+_PLOTS_DIR = "plots"
+os.makedirs(_PLOTS_DIR, exist_ok=True)
+
+# Contador global para nombrar los ficheros en orden
+_plot_counter = [0]
+
+def _save(filename: str) -> None:
+    """ Guarda la figura actual en la carpeta de plots y la cierra. """
+    _plot_counter[0] += 1
+    path = os.path.join(_PLOTS_DIR, f"{_plot_counter[0]:02d}_{filename}")
+    plt.savefig(path, dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"  [Plot guardado] {path}")
 
 def plot_demand(demand: np.ndarray) -> None:
     """ Plots the demand as a time-series (signal) """
@@ -12,8 +30,7 @@ def plot_demand(demand: np.ndarray) -> None:
     plt.ylabel("Power demand (0 - 1)")
     plt.legend()
     plt.grid(True)
-    plt.show()
-    return
+    _save("demand.png")
 
 def plot_demand_response(demand: np.ndarray, response: np.ndarray) -> None:
     """ Plots the demand-response as two different time-series """
@@ -25,8 +42,7 @@ def plot_demand_response(demand: np.ndarray, response: np.ndarray) -> None:
     plt.ylabel("Power value (0 - 1)")
     plt.legend()
     plt.grid(True)
-    plt.show()
-    return
+    _save("demand_response.png")
 
 def plot_correlation(demand: np.ndarray, response: np.ndarray) -> None:
     """ Plots the demand-response correlation (scatter-plot) """
@@ -46,8 +62,7 @@ def plot_correlation(demand: np.ndarray, response: np.ndarray) -> None:
     plt.ylabel("Power value (0 - 1)")
     plt.legend()
     plt.grid(True)
-    plt.show()
-    return
+    _save("correlation.png")
 
 def plot_reactor_as_radar(probs: np.ndarray) -> None:
     """ Plots the probabilities of the reactor in a radar-plot style """
@@ -69,7 +84,7 @@ def plot_reactor_as_radar(probs: np.ndarray) -> None:
     labels       += labels[:1]
     ideal_values += ideal_values[:1]
 
-    # Create the polar figure and show it
+    # Create the polar figure and save it
     _, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
     ax.set_title("Nuclear reactor stochastic dynamics", fontsize=20)
     ax.plot(angles, values, linewidth=2, c='g', zorder=2)
@@ -80,8 +95,7 @@ def plot_reactor_as_radar(probs: np.ndarray) -> None:
     ax.set_xticklabels(labels[:-1], fontsize=15)
     ax.set_ylim(0.0, 1.0)
     plt.legend()
-    plt.show()
-    return
+    _save("radar.png")
 
 def plot_control_bars_usage(reactor: Reactor, response: np.ndarray) -> None:
     """ Plots the reactor's response and the corresponding control bar insertion (usage) """
@@ -96,8 +110,7 @@ def plot_control_bars_usage(reactor: Reactor, response: np.ndarray) -> None:
     plt.ylabel("Power (%) | Insertion (%)")
     plt.legend()
     plt.grid(True)
-    plt.show()
-    return
+    _save("control_bars.png")
 
 def plot_mae_and_mse(MAE: np.float64, MSE: np.float64) -> None:
     categories = ['MAE', 'MSE']
@@ -107,7 +120,7 @@ def plot_mae_and_mse(MAE: np.float64, MSE: np.float64) -> None:
     plt.xlabel('Regression error metric')
     plt.ylabel('Error')
     plt.grid(True)
-    plt.show()
+    _save("mae_mse.png")
 
 def plot_r2_and_pearson(R2: np.float64, Pearson: np.float64) -> None:
     categories = ['R2', 'Pearson']
@@ -117,4 +130,4 @@ def plot_r2_and_pearson(R2: np.float64, Pearson: np.float64) -> None:
     plt.xlabel('Regression quality metric')
     plt.ylabel('Quality')
     plt.grid(True)
-    plt.show()
+    _save("r2_pearson.png")

@@ -30,21 +30,32 @@ class Reactor:
         return _str
 
     def compute_max_power(self) -> np.float64:
-        """ Computes the maximum power of a reactor based on its physical features """
-        ### TO BE COMPLETED BY THE STUDENTS ###
-        ...
-    
+        """
+        Computes the maximum thermal power of a reactor based on its physical features.
+        Formula: Pmax = Sigma_f * phi * V * E_f
+        """
+        return self.effective_section * self.neutron_flux * self.core_volume * self.fision_energy
+
     def compute_k(self) -> np.float64:
-        """ Computes the value of the k-constant """
-        ### TO BE COMPLETED BY THE STUDENTS ###
-        ...
-    
+        """
+        Computes the k-constant that governs the exponential decay of power with control rod insertion.
+        Formula: k = -ln(10^-6 / Pmax)
+        """
+        return -np.log(1e-6 / self.max_power)
+
     def compute_power(self, control_bars_insertion: np.float64) -> np.float64:
-        """ Computes the power delivered (%) by the reactor based on the % of control-bars inserted """
-        ### TO BE COMPLETED BY THE STUDENTS ###
-        ...
-    
+        """
+        Computes the fraction of power [0, 1] delivered by the reactor based on the
+        percentage of control bars inserted (B in [0, 1]).
+        Formula: P(B) = Pmax * e^(-k*B) / Pmax = e^(-k*B)
+        """
+        B = np.clip(control_bars_insertion, 0.0, 1.0)
+        return np.exp(-self.k * B)
+
     def compute_control_bars_insertion(self, power: np.float64) -> np.float64:
-        """ Computes the % of controls-bars inserted based on the % of power delivered by the reactor """
-        ### TO BE COMPLETED BY THE STUDENTS ###
-        ...
+        """
+        Computes the % of control bars inserted given the power fraction [0, 1].
+        Inverse of compute_power: B = -ln(power) / k
+        """
+        p = np.clip(power, 1e-10, 1.0)
+        return -np.log(p) / self.k

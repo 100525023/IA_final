@@ -2,6 +2,7 @@
 import numpy as np
 import argparse
 import json
+import os
 from Reactor import Reactor
 from ControlModule import ControlModule
 from DemandGenerator import generate_demand
@@ -39,14 +40,21 @@ def get_args() -> tuple[Reactor, np.float64]:
     print(reactor)  # Overloaded in the __str__ method of Reactor's class
     
     # Return the Reactor object, gamma and the random seed
-    return reactor, args.gamma, args.random_seed
+    return reactor, args.gamma, args.random_seed, args.input_reactor
 
 def main() -> None:
     # Parse the main arguments
-    reactor, gamma, random_seed = get_args()
+    reactor, gamma, random_seed, reactor_path = get_args()
 
     # Set the random seed
     np.random.seed(random_seed)
+
+    # Redirect plots to a subfolder named after the reactor model
+    import Plotter
+    Plotter._PLOTS_DIR = os.path.join("plots", reactor.model)
+    os.makedirs(Plotter._PLOTS_DIR, exist_ok=True)
+    Plotter._plot_counter[0] = 0   # reset counter for each run
+    print(f"Las gráficas se guardarán en: {Plotter._PLOTS_DIR}/")
 
     # Get the probabilities from the reactor's dynamics
     probs = np.array([reactor.probabilities['decrease'], 
@@ -97,6 +105,8 @@ def main() -> None:
 
     # Plot the R2 and the Corr in a bar-plot
     plot_r2_and_pearson(R2=_R2, Pearson=_Corr)
+
+    print(f"\nEjecución completada. Plots en: {Plotter._PLOTS_DIR}/")
 
 if __name__ == '__main__':
     main()
