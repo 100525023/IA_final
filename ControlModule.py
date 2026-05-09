@@ -159,8 +159,8 @@ class ControlModule:
                     next_level = levels[s_next]
 
                     moving_away = (
-                        (demand_t > current_level and next_level < current_level) or
-                        (demand_t < current_level and next_level > current_level)
+                        (next_level > demand_t and next_level > current_level) or
+                        (next_level < demand_t and next_level < current_level)
                     )
 
                     if moving_away:

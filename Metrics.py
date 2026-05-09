@@ -101,8 +101,8 @@ def Corr(y_true: np.ndarray, y_pred: np.ndarray) -> np.float64:
         Returns 0.0 if either signal has zero variance (degenerate case).
     """
     cov    = np.cov(y_true, y_pred)[0, 1]
-    std_y  = np.std(y_true)
-    std_yh = np.std(y_pred)
+    std_y  = np.std(y_true, ddof=1)
+    std_yh = np.std(y_pred, ddof=1)
 
     if std_y == 0.0 or std_yh == 0.0:
         return 0.0
