@@ -11,16 +11,9 @@ from Plotter import *
 
 def get_args() -> tuple[Reactor, np.float64, int, str]:
     """
-    Lee los argumentos de la línea de comandos y construye el objeto Reactor
-    a partir del fichero JSON indicado.
-
-    Se esperan tres argumentos:
-    - --input-reactor (-i): ruta al JSON con la configuración del reactor.
-    - --gamma (-g): factor de descuento del MDP.
-    - --random-seed (-r): semilla para el generador de números aleatorios.
-
-    Devuelve una tupla con el reactor ya construido, gamma, la semilla y la ruta
-    al fichero del reactor.
+    Parses the command-line arguments and builds the Reactor object from the given JSON file.
+    Expects --input-reactor, --gamma and --random-seed, and returns them together with the
+    constructed reactor instance.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-reactor", "-i", type=str,
@@ -54,46 +47,33 @@ def get_args() -> tuple[Reactor, np.float64, int, str]:
 
 def main() -> None:
     """
-    Punto de entrada de la simulación del control del reactor nuclear.
-
-    Carga el reactor desde su fichero de configuración.
-    Genera una curva de demanda aleatoria.
-    Ejecuta el bucle de control basado en MDP.
-    Calcula las métricas de calidad del seguimiento.
-    Guarda todas las gráficas en disco.
-
-    Las gráficas se guardan en una subcarpeta con el nombre del modelo del reactor,
-    así cada reactor tiene su propio directorio de resultados.
+    Entry point of the simulation. Loads the reactor, generates a random demand curve,
+    runs the MDP control loop, computes quality metrics and saves all plots to a
+    subdirectory named after the reactor model.
     """
     reactor, gamma, random_seed, reactor_path = get_args()
 
     np.random.seed(random_seed)
 
-    # Redirigimos las gráficas a una subcarpeta con el nombre del reactor
     import Plotter
     Plotter._PLOTS_DIR = os.path.join("plots", reactor.model)
     os.makedirs(Plotter._PLOTS_DIR, exist_ok=True)
     Plotter._plot_counter[0] = 0
     print(f"Plots will be saved to: {Plotter._PLOTS_DIR}/")
 
-    # Extraemos las probabilidades de transición como array numpy
     probs = np.array([
         reactor.probabilities['decrease'],
         reactor.probabilities['maintain'],
         reactor.probabilities['increase']
     ], dtype=np.float64)
 
-    # Radar: muestra qué tan predecible es este reactor
     plot_reactor_as_radar(probs=probs)
 
-    # Generamos la curva de demanda sintética
     demand = generate_demand(n_samples=512)
 
-    # Configuración del MDP
     n_states  = 100
     n_actions = 3
 
-    # Ejecutamos el bucle de control y obtenemos la respuesta del reactor
     response = ControlModule.control_loop(
         demand=demand,
         probs=probs,
@@ -102,13 +82,11 @@ def main() -> None:
         gamma=gamma
     )
 
-    # Generamos y guardamos todas las gráficas
     plot_demand(demand=demand)
     plot_demand_response(demand=demand, response=response)
     plot_control_bars_usage(reactor=reactor, response=response)
     plot_correlation(demand=demand, response=response)
 
-    # Calculamos y mostramos las métricas de calidad
     _MAE  = MAE(y_true=demand, y_pred=response)
     _MSE  = MSE(y_true=demand, y_pred=response)
     _R2   = R2(y_true=demand, y_pred=response)

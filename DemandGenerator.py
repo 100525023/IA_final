@@ -4,14 +4,9 @@ import numpy as np
 def random_recursive_signal(n_samples: np.int32, start: np.float64,
                              scale: np.float64 = 1.0) -> np.ndarray:
     """
-    Genera una señal construida paso a paso, sumando pequeños saltos aleatorios.
-
-    Funciona como un paseo aleatorio: partimos de un valor inicial y en cada paso
-    añadimos un poco de ruido gaussiano. El resultado se parece bastante a cómo
-    evoluciona una demanda eléctrica real a lo largo del tiempo.
-
-    'scale' controla cuánto puede variar la señal en cada paso; a mayor escala,
-    más agresivos son los cambios.
+    Builds a signal step by step, adding a small Gaussian jump at each point.
+    The result looks like a realistic power demand curve. Use scale to control
+    how aggressively the signal can change between steps.
     """
     signal = np.zeros(shape=n_samples, dtype=np.float64)
     noise = np.random.normal(loc=0.0, scale=scale, size=n_samples - 1)
@@ -25,15 +20,8 @@ def random_recursive_signal(n_samples: np.int32, start: np.float64,
 
 def scale_signal(signal: np.ndarray, method: str = 'MinMax') -> np.ndarray:
     """
-    Normaliza una señal para que sus valores queden en un rango manejable.
-
-    Soporta dos modos:
-    - 'MinMax': lleva todos los valores al rango [0, 1]. Ideal cuando queremos
-      representar algo como un porcentaje de potencia.
-    - 'STD': centra la señal en cero con varianza unitaria. Útil para análisis
-      estadístico.
-
-    Lanza un ValueError si se pide un método que no existe.
+    Normalizes a signal using either MinMax (rescales to [0, 1]) or STD (zero mean,
+    unit variance). Raises a ValueError if the method is not recognized.
     """
     method_lower = method.lower()
 
@@ -52,22 +40,15 @@ def scale_signal(signal: np.ndarray, method: str = 'MinMax') -> np.ndarray:
 
 def moving_average_filter(signal: np.ndarray, window_size: np.int32 = 7) -> np.ndarray:
     """
-    Suaviza una señal promediando cada punto con sus vecinos cercanos.
-
-    Esto elimina los picos bruscos y el ruido de alta frecuencia, dejando una
-    curva más limpia y realista. El tamaño de la ventana decide cuánto se suaviza:
-    ventanas más grandes producen señales más lisas pero también más lentas en
-    reaccionar a los cambios.
-
-    Para no perder puntos al final, rellenamos con el último valor conocido antes
-    de aplicar el filtro.
+    Smooths the signal by averaging each point with its neighbors. Larger windows
+    produce cleaner curves but react more slowly to sudden changes. The end of the
+    signal is padded with the last known value to preserve the original length.
     """
     if window_size <= 0:
         raise ValueError("The window size must be a positive integer.")
 
     p_size = window_size - 1
 
-    # Rellenamos el final con el último valor para conservar la longitud original
     signal_padded = np.zeros(shape=signal.shape[0] + p_size, dtype=np.float64)
     signal_padded[:signal.shape[0]] = signal
     signal_padded[signal.shape[0]:] = signal[-1]
@@ -82,14 +63,9 @@ def moving_average_filter(signal: np.ndarray, window_size: np.int32 = 7) -> np.n
 def generate_demand(n_samples: np.int32, start: np.float64 = None,
                     scale: np.float64 = None, apply_filtering: bool = True) -> np.ndarray:
     """
-    Genera una curva de demanda de potencia sintética y normalizada.
-
-    El proceso es sencillo: primero creamos un paseo aleatorio, lo normalizamos
-    a [0, 1] y, si se quiere, le pasamos un filtro de media móvil para que la
-    curva resulte más suave y natural.
-
-    Si no se especifica un punto de arranque, se elige uno al azar entre 0 y 100.
-    Si no se especifica escala de ruido, se usa 1.0 por defecto.
+    Generates a normalized power demand curve in [0, 1]. It builds a random walk,
+    scales it with MinMax, and optionally smooths it with a moving average filter
+    to make the result look more like a real demand signal.
     """
     demand_signal = random_recursive_signal(
         n_samples=n_samples,

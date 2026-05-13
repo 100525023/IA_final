@@ -1,25 +1,19 @@
 import os
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')   # Backend no interactivo: renderiza a fichero sin abrir ventana
+matplotlib.use('Agg')   # Non-interactive backend: renders to file without opening a window
 import matplotlib.pyplot as plt
 from Reactor import Reactor
 
-# Carpeta donde se guardarán todas las gráficas generadas
 _PLOTS_DIR = "plots"
 os.makedirs(_PLOTS_DIR, exist_ok=True)
 
-# Contador global para prefijar los nombres de archivo con un índice ordenado
+# Global counter so files are saved with an ordered numeric prefix
 _plot_counter = [0]
 
 
 def _save(filename: str) -> None:
-    """
-    Guarda la figura actual de matplotlib en la carpeta de plots y la cierra.
-
-    Añade automáticamente un prefijo numérico al nombre del archivo para que,
-    al listarlos, aparezcan en el orden en que se generaron.
-    """
+    """Saves the current figure to the plots directory with a sequential prefix and closes it."""
     _plot_counter[0] += 1
     path = os.path.join(_PLOTS_DIR, f"{_plot_counter[0]:02d}_{filename}")
     plt.savefig(path, dpi=150, bbox_inches='tight')
@@ -28,12 +22,7 @@ def _save(filename: str) -> None:
 
 
 def plot_demand(demand: np.ndarray) -> None:
-    """
-    Dibuja la curva de demanda normalizada a lo largo del tiempo.
-
-    Es la primera gráfica que conviene ver: muestra qué se le estará pidiendo
-    al reactor a lo largo de toda la simulación.
-    """
+    """Plots the normalized demand curve over time, giving a first look at what the reactor will be asked to follow."""
     plt.figure(figsize=(8, 8))
     plt.title("Evolution in the power demand")
     plt.plot(range(demand.shape[0]), demand, label='Demand')
@@ -45,12 +34,7 @@ def plot_demand(demand: np.ndarray) -> None:
 
 
 def plot_demand_response(demand: np.ndarray, response: np.ndarray) -> None:
-    """
-    Superpone la demanda y la respuesta del reactor en la misma gráfica.
-
-    Así se puede ver a simple vista si el reactor sigue bien la demanda o se
-    queda rezagado / se dispara en los momentos de cambio brusco.
-    """
+    """Overlays demand and reactor response so it is easy to see how closely the reactor tracks the target."""
     plt.figure(figsize=(8, 8))
     plt.title("Power demand vs. Power response")
     plt.plot(range(demand.shape[0]), demand, label='Demand')
@@ -64,14 +48,10 @@ def plot_demand_response(demand: np.ndarray, response: np.ndarray) -> None:
 
 def plot_correlation(demand: np.ndarray, response: np.ndarray) -> None:
     """
-    Muestra la correlación entre demanda y respuesta como un scatter plot,
-    con una recta de regresión lineal encima.
-
-    Si los puntos se agrupan cerca de la diagonal, el reactor está siguiendo
-    bien la demanda. Una nube dispersa o una pendiente muy diferente de 1
-    indica problemas de seguimiento.
+    Shows a scatter plot of demand vs. response with a linear regression line.
+    Points clustered near the diagonal indicate good tracking; a dispersed cloud
+    or a very different slope reveals systematic errors.
     """
-    # Regresión lineal por ecuaciones normales
     X = np.ones(shape=(demand.shape[0], 2), dtype=np.float64)
     X[:, 1] = demand
     thetas = np.linalg.inv(X.T @ X) @ X.T @ response
@@ -91,20 +71,16 @@ def plot_correlation(demand: np.ndarray, response: np.ndarray) -> None:
 
 def plot_reactor_as_radar(probs: np.ndarray) -> None:
     """
-    Muestra el perfil estocástico del reactor como un gráfico de radar.
-
-    Cada eje representa una acción (Disminuir, Mantener, Aumentar), y el valor
-    trazado es la probabilidad de que esa acción produzca exactamente el resultado
-    deseado. Un polígono grande y cercano al de referencia gris significa un reactor
-    muy predecible; uno pequeño o irregular significa que el reactor tiene tendencia
-    a hacer "lo que le da la gana".
+    Draws the reactor's stochastic profile as a radar chart. Each axis represents
+    one action and shows the probability of the intended outcome. A large polygon
+    means a predictable reactor; a small or irregular one means it often does
+    something other than what was asked.
     """
     labels = ['D', 'M', 'I']
     angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
     values = probs[:, 1].tolist()
     ideal_values = [1.0, 1.0, 1.0]
 
-    # Cerramos el polígono repitiendo el primer elemento
     values       += values[:1]
     angles       += angles[:1]
     labels       += labels[:1]
@@ -125,12 +101,9 @@ def plot_reactor_as_radar(probs: np.ndarray) -> None:
 
 def plot_control_bars_usage(reactor: Reactor, response: np.ndarray) -> None:
     """
-    Dibuja juntos la respuesta de potencia y el porcentaje de inserción de barras
-    de control necesario para conseguirla.
-
-    Es útil para entender la relación física: cuando el reactor está a poca potencia,
-    las barras tienen que estar muy metidas, y viceversa. Si ambas curvas se cruzan
-    de forma extraña, puede indicar un comportamiento anómalo.
+    Plots the reactor response alongside the required control rod insertion. It helps
+    understand the physical relationship between power output and rod position, and
+    makes any anomalous behavior easy to spot visually.
     """
     control_bar_usage = np.zeros_like(a=response, dtype=np.float64)
     for i in range(response.shape[0]):
@@ -150,11 +123,8 @@ def plot_control_bars_usage(reactor: Reactor, response: np.ndarray) -> None:
 
 def plot_mae_and_mse(MAE: np.float64, MSE: np.float64) -> None:
     """
-    Representa MAE y MSE como un gráfico de barras para comparar visualmente
-    los dos errores de un vistazo.
-
-    Si el MSE es mucho mayor que el MAE, significa que hay algunos instantes con
-    errores grandes que están inflando el promedio cuadrático.
+    Bar chart comparing MAE and MSE at a glance. If MSE is much larger than MAE,
+    there are isolated moments with big errors inflating the squared average.
     """
     plt.figure(figsize=(6, 6))
     categories = ['MAE', 'MSE']
@@ -169,11 +139,9 @@ def plot_mae_and_mse(MAE: np.float64, MSE: np.float64) -> None:
 
 def plot_r2_and_pearson(R2: np.float64, Pearson: np.float64) -> None:
     """
-    Representa R² y la correlación de Pearson como un gráfico de barras.
-
-    Ambos miden cosas ligeramente distintas: R² valora la calidad del ajuste
-    absoluto y Pearson mide la sincronía de las dos curvas. Verlos juntos ayuda
-    a entender si el reactor falla en magnitud, en timing, o en ambas cosas.
+    Bar chart comparing R² and Pearson correlation. R² measures absolute fit quality
+    while Pearson measures synchrony, so seeing both together reveals whether the
+    reactor fails in magnitude, in timing, or in both.
     """
     plt.figure(figsize=(6, 6))
     categories = ['R2', 'Pearson']
