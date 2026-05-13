@@ -4,25 +4,14 @@ import numpy as np
 def random_recursive_signal(n_samples: np.int32, start: np.float64,
                              scale: np.float64 = 1.0) -> np.ndarray:
     """
-    Generates a synthetic time series by accumulating Gaussian noise step by step.
+    Genera una señal construida paso a paso, sumando pequeños saltos aleatorios.
 
-    Each sample is computed as the previous value plus a random increment drawn
-    from a normal distribution. This produces a random walk that resembles realistic
-    signals such as power demand curves.
+    Funciona como un paseo aleatorio: partimos de un valor inicial y en cada paso
+    añadimos un poco de ruido gaussiano. El resultado se parece bastante a cómo
+    evoluciona una demanda eléctrica real a lo largo del tiempo.
 
-    Parameters
-    ----------
-    n_samples : int
-        Number of samples in the output signal.
-    start : float
-        Initial value of the signal (first sample, without any noise applied).
-    scale : float, optional
-        Standard deviation of the Gaussian noise added at each step. Defaults to 1.0.
-
-    Returns
-    -------
-    np.ndarray
-        Array of shape (n_samples,) with the generated signal.
+    'scale' controla cuánto puede variar la señal en cada paso; a mayor escala,
+    más agresivos son los cambios.
     """
     signal = np.zeros(shape=n_samples, dtype=np.float64)
     noise = np.random.normal(loc=0.0, scale=scale, size=n_samples - 1)
@@ -36,27 +25,15 @@ def random_recursive_signal(n_samples: np.int32, start: np.float64,
 
 def scale_signal(signal: np.ndarray, method: str = 'MinMax') -> np.ndarray:
     """
-    Normalizes a signal using one of the supported scaling methods.
+    Normaliza una señal para que sus valores queden en un rango manejable.
 
-    Parameters
-    ----------
-    signal : np.ndarray
-        Input signal to normalize.
-    method : str, optional
-        Normalization method to apply. Supported values are:
-        - 'MinMax': rescales the signal to the range [0, 1].
-        - 'STD': standardizes the signal to zero mean and unit variance.
-        Comparison is case-insensitive. Defaults to 'MinMax'.
+    Soporta dos modos:
+    - 'MinMax': lleva todos los valores al rango [0, 1]. Ideal cuando queremos
+      representar algo como un porcentaje de potencia.
+    - 'STD': centra la señal en cero con varianza unitaria. Útil para análisis
+      estadístico.
 
-    Returns
-    -------
-    np.ndarray
-        Normalized signal with the same shape as the input.
-
-    Raises
-    ------
-    ValueError
-        If the specified method is not recognized.
+    Lanza un ValueError si se pide un método que no existe.
     """
     method_lower = method.lower()
 
@@ -75,36 +52,22 @@ def scale_signal(signal: np.ndarray, method: str = 'MinMax') -> np.ndarray:
 
 def moving_average_filter(signal: np.ndarray, window_size: np.int32 = 7) -> np.ndarray:
     """
-    Smooths a signal by applying a moving average filter.
+    Suaviza una señal promediando cada punto con sus vecinos cercanos.
 
-    The filter replaces each sample with the mean of the surrounding window,
-    effectively removing high-frequency noise. The signal length is preserved
-    by padding the end with the last known value before convolution.
+    Esto elimina los picos bruscos y el ruido de alta frecuencia, dejando una
+    curva más limpia y realista. El tamaño de la ventana decide cuánto se suaviza:
+    ventanas más grandes producen señales más lisas pero también más lentas en
+    reaccionar a los cambios.
 
-    Parameters
-    ----------
-    signal : np.ndarray
-        Input signal to filter.
-    window_size : int, optional
-        Number of samples to include in each averaging window. Must be greater
-        than zero. Defaults to 7.
-
-    Returns
-    -------
-    np.ndarray
-        Filtered signal with the same shape as the input.
-
-    Raises
-    ------
-    ValueError
-        If window_size is not a positive integer.
+    Para no perder puntos al final, rellenamos con el último valor conocido antes
+    de aplicar el filtro.
     """
     if window_size <= 0:
         raise ValueError("The window size must be a positive integer.")
 
     p_size = window_size - 1
 
-    # Pad the signal at the end by repeating the last value to preserve output length
+    # Rellenamos el final con el último valor para conservar la longitud original
     signal_padded = np.zeros(shape=signal.shape[0] + p_size, dtype=np.float64)
     signal_padded[:signal.shape[0]] = signal
     signal_padded[signal.shape[0]:] = signal[-1]
@@ -119,28 +82,14 @@ def moving_average_filter(signal: np.ndarray, window_size: np.int32 = 7) -> np.n
 def generate_demand(n_samples: np.int32, start: np.float64 = None,
                     scale: np.float64 = None, apply_filtering: bool = True) -> np.ndarray:
     """
-    Generates a realistic normalized power demand signal.
+    Genera una curva de demanda de potencia sintética y normalizada.
 
-    The signal is constructed as a random walk (via Gaussian noise accumulation),
-    then rescaled to [0, 1] using Min-Max normalization. Optionally, a moving
-    average filter is applied to smooth out high-frequency fluctuations, producing
-    a more natural-looking demand curve.
+    El proceso es sencillo: primero creamos un paseo aleatorio, lo normalizamos
+    a [0, 1] y, si se quiere, le pasamos un filtro de media móvil para que la
+    curva resulte más suave y natural.
 
-    Parameters
-    ----------
-    n_samples : int
-        Number of time steps in the demand signal.
-    start : float, optional
-        Starting power value. If not provided, a random value in [0, 100] is used.
-    scale : float, optional
-        Noise scale for the random walk. If not provided, defaults to 1.0.
-    apply_filtering : bool, optional
-        Whether to apply a moving average filter after normalization. Defaults to True.
-
-    Returns
-    -------
-    np.ndarray
-        Normalized demand signal of shape (n_samples,), with values in [0, 1].
+    Si no se especifica un punto de arranque, se elige uno al azar entre 0 y 100.
+    Si no se especifica escala de ruido, se usa 1.0 por defecto.
     """
     demand_signal = random_recursive_signal(
         n_samples=n_samples,

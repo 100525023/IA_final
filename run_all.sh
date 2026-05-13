@@ -15,9 +15,7 @@ REACTORS=(
 )
 
 for reactor in "${REACTORS[@]}"; do
-    echo "=============================="
     echo "Ejecutando: $reactor"
-    echo "=============================="
     python main.py --input-reactor "$reactor" --gamma $GAMMA --random-seed $SEED
     echo ""
 done

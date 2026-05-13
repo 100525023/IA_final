@@ -3,12 +3,17 @@ import numpy as np
 
 class Reactor:
     """
-    Physical model of a nuclear reactor.
+    Modelo físico de un reactor nuclear.
 
-    Encapsulates the reactor's core parameters and provides methods to compute
-    its maximum thermal power, the k constant governing the exponential decay of
-    power with control rod insertion, and the bidirectional mapping between control
-    rod position and normalized power output.
+    Esta clase representa un reactor concreto con sus parámetros físicos reales:
+    sección eficaz de fisión, flujo de neutrones, volumen del núcleo y energía
+    por fisión. A partir de ellos calcula automáticamente la potencia máxima y
+    la constante de decaimiento que gobierna cómo responde el reactor a la
+    inserción de las barras de control.
+
+    También lleva consigo las probabilidades estocásticas de transición, que
+    definen cuánto "obedece" el reactor cuando le pedimos subir, mantener o
+    bajar potencia.
     """
 
     def __init__(self,
@@ -19,23 +24,13 @@ class Reactor:
                  fision_energy: np.float64,
                  probabilities: dict):
         """
-        Initializes the reactor with its physical characteristics and stochastic dynamics.
+        Crea un reactor a partir de sus parámetros físicos y su perfil estocástico.
 
-        Parameters
-        ----------
-        model : str
-            Human-readable name or identifier of the reactor model.
-        effective_section : float
-            Macroscopic fission cross-section of the fuel (cm^-1).
-        neutron_flux : float
-            Neutron flux in the reactor core (neutrons / cm^2 · s).
-        core_volume : float
-            Volume of the reactor core (cm^3).
-        fision_energy : float
-            Energy released per fission event (J).
-        probabilities : dict
-            Stochastic transition probabilities for each control action
-            (decrease, maintain, increase), as read from the reactor's JSON file.
+        'model' es simplemente el nombre del reactor (p. ej. "RBMK").
+        Los parámetros físicos (sección eficaz, flujo neutrónico, volumen y energía
+        de fisión) se usan para calcular la potencia máxima teórica y la constante k.
+        'probabilities' viene del JSON del reactor y describe cómo de predecible
+        es su comportamiento ante cada acción de control.
         """
         self.model             = model
         self.effective_section = effective_section
@@ -47,7 +42,7 @@ class Reactor:
         self.k                 = self.compute_k()
 
     def __str__(self) -> str:
-        """Returns a human-readable summary of the reactor's physical parameters."""
+        """Devuelve un resumen legible con todos los parámetros físicos del reactor."""
         lines = [
             f"Model:             {self.model}",
             f"Effective section: {self.effective_section} cm^-1",
@@ -60,72 +55,45 @@ class Reactor:
 
     def compute_max_power(self) -> np.float64:
         """
-        Computes the theoretical maximum thermal power of the reactor.
+        Calcula la potencia térmica máxima teórica del reactor en vatios.
 
-        Uses the standard neutronics formula:
+        Usa la fórmula clásica de neutrónica:
             P_max = Sigma_f · phi · V · E_f
 
-        Returns
-        -------
-        float
-            Maximum thermal power in watts (W).
+        Es la potencia que tendría el reactor si no hubiera ninguna barra de
+        control insertada y todo funcionara a pleno rendimiento.
         """
         return self.effective_section * self.neutron_flux * self.core_volume * self.fision_energy
 
     def compute_k(self) -> np.float64:
         """
-        Computes the decay constant k for the control rod insertion model.
+        Calcula la constante de decaimiento k para el modelo de inserción de barras.
 
-        The constant is derived so that full insertion (B = 1) produces a power
-        of approximately zero (10^-6 W), while no insertion (B = 0) yields P_max:
-            k = -ln(10^-6 / P_max)
-
-        Returns
-        -------
-        float
-            Decay constant k (dimensionless).
+        La idea es que con las barras completamente insertadas (B = 1), la potencia
+        baja hasta casi cero (1e-6 W), y con las barras fuera (B = 0) tenemos
+        la potencia máxima. k se elige para que esa transición sea suave y exponencial.
         """
         return -np.log(1e-6 / self.max_power)
 
     def compute_power(self, control_bars_insertion: np.float64) -> np.float64:
         """
-        Returns the normalized power fraction [0, 1] for a given control rod insertion.
+        Devuelve la fracción de potencia normalizada [0, 1] para una inserción dada de barras.
 
-        The model follows an exponential decay:
-            P(B) = P_max · e^(-k·B) / P_max = e^(-k·B)
-
-        Where B = 0 corresponds to no insertion (maximum power) and B = 1 to
-        full insertion (near-zero power).
-
-        Parameters
-        ----------
-        control_bars_insertion : float
-            Fraction of control rods inserted, in the range [0, 1].
-
-        Returns
-        -------
-        float
-            Normalized power output, in the range [~0, 1].
+        Cuanto más insertadas estén las barras (B → 1), menos potencia produce el reactor.
+        Con B = 0 el reactor está a tope; con B = 1 está prácticamente parado.
+        El modelo de decaimiento es exponencial: P(B) = e^(-k·B).
         """
         B = np.clip(control_bars_insertion, 0.0, 1.0)
         return np.exp(-self.k * B)
 
     def compute_control_bars_insertion(self, power: np.float64) -> np.float64:
         """
-        Returns the control rod insertion fraction required to achieve a given power level.
+        Hace el camino inverso: dado un nivel de potencia, dice cuánto hay que
+        insertar las barras para conseguirlo.
 
-        This is the analytical inverse of compute_power:
-            B = -ln(power) / k
-
-        Parameters
-        ----------
-        power : float
-            Desired normalized power level, in the range (0, 1].
-
-        Returns
-        -------
-        float
-            Required control rod insertion fraction, in the range [0, 1].
+        Es simplemente la función inversa de compute_power. Útil para las
+        visualizaciones, donde queremos saber qué posición física de las barras
+        corresponde a la potencia que está produciendo el reactor en cada momento.
         """
         p = np.clip(power, 1e-10, 1.0)
         return -np.log(p) / self.k

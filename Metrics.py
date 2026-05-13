@@ -3,71 +3,38 @@ import numpy as np
 
 def MAE(y_true: np.ndarray, y_pred: np.ndarray) -> np.float64:
     """
-    Computes the Mean Absolute Error (MAE) between the true and predicted values.
+    Calcula el Error Absoluto Medio entre la demanda real y la respuesta del reactor.
 
-    MAE measures the average magnitude of the errors without considering their direction.
-    It is expressed in the same units as the target variable and is less sensitive to
-    outliers than MSE.
-
-    Parameters
-    ----------
-    y_true : np.ndarray
-        Ground truth values (demand curve).
-    y_pred : np.ndarray
-        Predicted values (reactor response curve).
-
-    Returns
-    -------
-    float
-        Mean absolute error. A value of 0 indicates a perfect match.
+    Básicamente mide, en promedio, cuánto se aleja la respuesta de lo que se pedía.
+    Un MAE de 0 sería perfecto. Al usar valor absoluto en lugar de cuadrados,
+    los errores grandes no pesan desproporcionadamente: un error de 0.1 cuenta
+    exactamente el doble que uno de 0.05.
     """
     return np.mean(np.abs(y_true - y_pred))
 
 
 def MSE(y_true: np.ndarray, y_pred: np.ndarray) -> np.float64:
     """
-    Computes the Mean Squared Error (MSE) between the true and predicted values.
+    Calcula el Error Cuadrático Medio entre la demanda real y la respuesta del reactor.
 
-    MSE penalizes larger errors more heavily than MAE due to the squaring of residuals.
-    It is particularly useful for detecting and discouraging large deviations between
-    the demand and the reactor response.
-
-    Parameters
-    ----------
-    y_true : np.ndarray
-        Ground truth values (demand curve).
-    y_pred : np.ndarray
-        Predicted values (reactor response curve).
-
-    Returns
-    -------
-    float
-        Mean squared error. A value of 0 indicates a perfect match.
+    A diferencia del MAE, elevar al cuadrado penaliza mucho más los errores grandes.
+    Eso lo hace útil para detectar si el reactor tiene picos puntuales de descontrol,
+    aunque sea muy preciso el resto del tiempo. Un MSE de 0 indica ajuste perfecto.
     """
     return np.mean((y_true - y_pred) ** 2)
 
 
 def R2(y_true: np.ndarray, y_pred: np.ndarray) -> np.float64:
     """
-    Computes the R² coefficient of determination.
+    Calcula el coeficiente de determinación R², que mide qué tan bien sigue el
+    reactor la forma de la curva de demanda.
 
-    R² measures how much of the variance in the true signal is explained by the
-    predicted signal, benchmarked against a trivial mean-based predictor. Values
-    close to 1 indicate a high-quality fit; values at or below 0 indicate that the
-    model performs no better than simply predicting the mean.
+    Un R² cercano a 1 significa que el reactor captura bien la tendencia de la demanda.
+    Un R² en torno a 0 o negativo indica que el reactor no lo hace mejor que
+    simplemente predecir siempre la media, lo cual sería bastante malo.
 
-    Parameters
-    ----------
-    y_true : np.ndarray
-        Ground truth values (demand curve).
-    y_pred : np.ndarray
-        Predicted values (reactor response curve).
-
-    Returns
-    -------
-    float
-        R² coefficient, typically in the range (-inf, 1].
-        Returns 0.0 if all true values are identical (degenerate case).
+    En el caso degenerado en que todos los valores de demanda sean iguales,
+    devuelve 0.0 para evitar división por cero.
     """
     ss_res = np.sum((y_true - y_pred) ** 2)
     ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
@@ -80,25 +47,17 @@ def R2(y_true: np.ndarray, y_pred: np.ndarray) -> np.float64:
 
 def Corr(y_true: np.ndarray, y_pred: np.ndarray) -> np.float64:
     """
-    Computes the Pearson Correlation Coefficient between the true and predicted values.
+    Calcula el coeficiente de correlación de Pearson entre demanda y respuesta.
 
-    The Pearson coefficient measures the strength and direction of the linear
-    relationship between the two signals. It is bounded in [-1, 1], where 1 means
-    perfect positive correlation, -1 means perfect negative correlation, and 0
-    indicates no linear relationship.
+    Mide si las dos curvas "suben y bajan juntas". Un valor de 1 indica que
+    se mueven perfectamente al unísono, -1 que van en sentido contrario, y 0
+    que no hay relación lineal entre ellas.
 
-    Parameters
-    ----------
-    y_true : np.ndarray
-        Ground truth values (demand curve).
-    y_pred : np.ndarray
-        Predicted values (reactor response curve).
+    A diferencia del R², esto no mide exactitud sino sincronía: un reactor
+    puede correlacionar bien con la demanda pero estar sistemáticamente desfasado
+    en amplitud.
 
-    Returns
-    -------
-    float
-        Pearson correlation coefficient in the range [-1, 1].
-        Returns 0.0 if either signal has zero variance (degenerate case).
+    Si alguna de las dos señales no varía nada (varianza cero), devuelve 0.0.
     """
     cov    = np.cov(y_true, y_pred)[0, 1]
     std_y  = np.std(y_true, ddof=1)
